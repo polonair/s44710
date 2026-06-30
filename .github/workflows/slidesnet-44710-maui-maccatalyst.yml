@@ -1,5 +1,5 @@
-name: SLIDESNET-44710 MAUI Mac Catalyst
-run-name: SLIDESNET-44710 MAUI Mac Catalyst
+name: SLIDESNET-44710 Aspose.Slides Mac Catalyst Packaging
+run-name: SLIDESNET-44710 Aspose.Slides Mac Catalyst Packaging
 
 on:
   workflow_dispatch:
@@ -40,72 +40,62 @@ jobs:
       - name: Restore
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
           dotnet restore \
             MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj \
             -p:SlidesPackageVersion=${{ matrix.slides-version }} \
             -p:RuntimeIdentifier=maccatalyst-x64 \
             2>&1 | tee restore-${{ matrix.slides-version }}.log
-          restore_exit=${PIPESTATUS[0]}
           echo "## dotnet restore log, Aspose.Slides ${{ matrix.slides-version }}" >> "${GITHUB_STEP_SUMMARY}"
           echo '```text' >> "${GITHUB_STEP_SUMMARY}"
           tail -n 80 restore-${{ matrix.slides-version }}.log >> "${GITHUB_STEP_SUMMARY}"
           echo '```' >> "${GITHUB_STEP_SUMMARY}"
-          exit "${restore_exit}"
 
-      - name: Build Mac Catalyst app
-        shell: bash
-        run: |
-          set +e
-          dotnet publish \
-            MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj \
-            -f net10.0-maccatalyst \
-            -c Release \
-            -p:SlidesPackageVersion=${{ matrix.slides-version }} \
-            -p:RuntimeIdentifier=maccatalyst-x64 \
-            -p:CreatePackage=false \
-            -p:EnableCodeSigning=false \
-            --no-restore \
-            2>&1 | tee publish-${{ matrix.slides-version }}.log
-          publish_exit=${PIPESTATUS[0]}
-          echo "publish_exit=${publish_exit}" >> "${GITHUB_ENV}"
-          echo "## dotnet publish log, Aspose.Slides ${{ matrix.slides-version }}" >> "${GITHUB_STEP_SUMMARY}"
-          echo '```text' >> "${GITHUB_STEP_SUMMARY}"
-          tail -n 80 publish-${{ matrix.slides-version }}.log >> "${GITHUB_STEP_SUMMARY}"
-          echo '```' >> "${GITHUB_STEP_SUMMARY}"
-          exit "${publish_exit}"
-
-      - name: Inspect app bundle native libraries
+      - name: Inspect Aspose.Slides package targets
         shell: bash
         run: |
           set -euo pipefail
-          app_path="$(find MauiSlidesCrossPlatformCheck/bin/Release/net10.0-maccatalyst -name '*.app' -type d | head -n 1)"
-          if [[ -z "${app_path}" ]]; then
-            echo "No .app bundle was produced."
-            find MauiSlidesCrossPlatformCheck/bin -maxdepth 6 -type d -print
+
+          package_dir="${HOME}/.nuget/packages/aspose.slides.net6.crossplatform/${{ matrix.slides-version }}"
+          targets_file="${package_dir}/buildTransitive/Aspose.Slides.NET6.CrossPlatform.targets"
+          native_dir="${package_dir}/net6.0_native"
+
+          if [[ ! -f "${targets_file}" ]]; then
+            echo "::error::Package targets file was not restored: ${targets_file}"
             exit 1
           fi
 
-          echo "App bundle: ${app_path}"
-          echo "Aspose native libraries found in bundle:"
-          find "${app_path}" -name '*aspose.slides.drawing.capi*' -print | sort | tee native-libs-${{ matrix.slides-version }}.txt
+          {
+            echo "Package: ${package_dir}"
+            echo
+            echo "Targets file:"
+            sed -n '1,220p' "${targets_file}"
+            echo
+            echo "Native files:"
+            find "${native_dir}" -maxdepth 1 -type f -name '*aspose.slides.drawing.capi*' -print | sort
+          } | tee package-inspection-${{ matrix.slides-version }}.txt
 
-          if grep -q 'libaspose.slides.drawing.capi_appleclang' native-libs-${{ matrix.slides-version }}.txt; then
-            echo "Aspose.Slides macOS native drawing library is present."
+          if ! grep -q 'libaspose.slides.drawing.capi_appleclang' package-inspection-${{ matrix.slides-version }}.txt; then
+            echo "::error::Aspose.Slides package does not contain macOS native drawing libraries."
+            exit 1
+          fi
+
+          if grep -q "TargetFramework.*net8.0" "${targets_file}"; then
+            echo "::warning::The package targets file gates native library copy by exact TargetFramework values. Platform TFMs such as net10.0-maccatalyst do not satisfy that condition."
           elif [[ "${{ matrix.native-library-required }}" == "true" ]]; then
-            echo "::error::Aspose.Slides macOS native drawing library is missing from the Mac Catalyst bundle."
-            exit 1
-          else
-            echo "::warning::Aspose.Slides macOS native drawing library is missing from the Mac Catalyst bundle."
+            echo "The package targets file does not gate native library copy by exact TargetFramework values."
           fi
+
+          echo "## Package inspection, Aspose.Slides ${{ matrix.slides-version }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo '```text' >> "${GITHUB_STEP_SUMMARY}"
+          cat package-inspection-${{ matrix.slides-version }}.txt >> "${GITHUB_STEP_SUMMARY}"
+          echo '```' >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload bundle inspection
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: slidesnet-44710-${{ matrix.slides-version }}
+          name: slidesnet-44710-package-${{ matrix.slides-version }}
           path: |
             restore-${{ matrix.slides-version }}.log
-            native-libs-${{ matrix.slides-version }}.txt
-            publish-${{ matrix.slides-version }}.log
-            MauiSlidesCrossPlatformCheck/bin/Release/net10.0-maccatalyst/**/*.app
+            package-inspection-${{ matrix.slides-version }}.txt

@@ -4,16 +4,16 @@ This folder contains a minimal MAUI Mac Catalyst repro for investigating whether
 
 The repro targets .NET 10 MAUI because current GitHub-hosted macOS runners reject older Mac Catalyst TFMs under the current workload policy.
 
-The GitHub Actions workflow `.github/workflows/slidesnet-44710-maui-maccatalyst.yml` builds the same MAUI app twice:
+The GitHub Actions workflow `.github/workflows/slidesnet-44710-maui-maccatalyst.yml` restores the same MAUI app twice and inspects the restored Aspose.Slides package:
 
 - `Aspose.Slides.NET6.CrossPlatform` `24.7.0`
 - `Aspose.Slides.NET6.CrossPlatform` `26.6.0`
 
-After publishing, the workflow inspects the produced `.app` bundle and checks whether `libaspose.slides.drawing.capi_appleclang*.dylib` is present.
+The workflow checks whether the package contains `libaspose.slides.drawing.capi_appleclang*.dylib` and whether the package targets gate native library copy by exact `TargetFramework` values.
 
 Expected investigation result:
 
-- `24.7.0` may report a warning because its `buildTransitive` targets only include native libraries for exact `net6.0`, `net7.0`, and `net8.0` TFMs. `net10.0-maccatalyst` does not match that condition.
+- `24.7.0` should report a warning because its `buildTransitive` targets only include native libraries for exact `net6.0`, `net7.0`, and `net8.0` TFMs. `net10.0-maccatalyst` does not match that condition.
 - `26.6.0` should include the native libraries because the exact-TFM condition has been removed from the package targets. The workflow fails if the native library is still missing for this version.
 
 For the final runtime check on a rented Mac, open this project and run:
