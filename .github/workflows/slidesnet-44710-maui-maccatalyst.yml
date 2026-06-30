@@ -38,11 +38,20 @@ jobs:
         run: dotnet workload install maui --source https://api.nuget.org/v3/index.json
 
       - name: Restore
-        run: >
-          dotnet restore
-          MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj
-          -p:SlidesPackageVersion=${{ matrix.slides-version }}
-          -p:RuntimeIdentifier=maccatalyst-x64
+        shell: bash
+        run: |
+          set +e
+          dotnet restore \
+            MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj \
+            -p:SlidesPackageVersion=${{ matrix.slides-version }} \
+            -p:RuntimeIdentifier=maccatalyst-x64 \
+            2>&1 | tee restore-${{ matrix.slides-version }}.log
+          restore_exit=${PIPESTATUS[0]}
+          echo "## dotnet restore log, Aspose.Slides ${{ matrix.slides-version }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo '```text' >> "${GITHUB_STEP_SUMMARY}"
+          tail -n 80 restore-${{ matrix.slides-version }}.log >> "${GITHUB_STEP_SUMMARY}"
+          echo '```' >> "${GITHUB_STEP_SUMMARY}"
+          exit "${restore_exit}"
 
       - name: Build Mac Catalyst app
         shell: bash
@@ -96,6 +105,7 @@ jobs:
         with:
           name: slidesnet-44710-${{ matrix.slides-version }}
           path: |
+            restore-${{ matrix.slides-version }}.log
             native-libs-${{ matrix.slides-version }}.txt
             publish-${{ matrix.slides-version }}.log
             MauiSlidesCrossPlatformCheck/bin/Release/net8.0-maccatalyst/**/*.app
