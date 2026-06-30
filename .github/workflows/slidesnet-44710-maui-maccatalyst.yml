@@ -1,17 +1,10 @@
 name: SLIDESNET-44710 MAUI Mac Catalyst
+run-name: SLIDESNET-44710 MAUI Mac Catalyst
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - SLIDESNET-44710-*
-    paths:
-      - ".github/workflows/slidesnet-44710-maui-maccatalyst.yml"
-      - "MauiSlidesCrossPlatformCheck/**"
   pull_request:
-    paths:
-      - ".github/workflows/slidesnet-44710-maui-maccatalyst.yml"
-      - "MauiSlidesCrossPlatformCheck/**"
 
 jobs:
   build-and-inspect:
