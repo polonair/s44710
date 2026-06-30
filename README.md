@@ -20,13 +20,12 @@ For the final runtime check on a rented Mac, open this project and run:
 
 ```bash
 dotnet workload install maui
-dotnet publish MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj \
-  -f net10.0-maccatalyst \
-  -c Release \
-  -p:SlidesPackageVersion=26.6.0 \
-  -p:RuntimeIdentifier=maccatalyst-x64 \
-  -p:CreatePackage=false \
-  -p:EnableCodeSigning=false
+chmod +x scripts/run-maccatalyst-runtime-check.sh
+scripts/run-maccatalyst-runtime-check.sh 24.7.0 maccatalyst-x64
+scripts/run-maccatalyst-runtime-check.sh 26.6.0 maccatalyst-x64
 ```
 
-Then launch the produced `.app` and confirm that the app opens and the `Presentation` constructor succeeds.
+The app writes `slidesnet-44710-result.txt` and `slidesnet-44710-output.pdf`. The result is exact:
+
+- `RESULT: PASS` means the Mac Catalyst app loaded Aspose.Slides and exported a PDF successfully.
+- `RESULT: FAIL` includes the full exception and stack trace.
