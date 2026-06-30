@@ -1,0 +1,97 @@
+name: SLIDESNET-44710 MAUI Mac Catalyst
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - SLIDESNET-44710-*
+    paths:
+      - ".github/workflows/slidesnet-44710-maui-maccatalyst.yml"
+      - "MauiSlidesCrossPlatformCheck/**"
+  pull_request:
+    paths:
+      - ".github/workflows/slidesnet-44710-maui-maccatalyst.yml"
+      - "MauiSlidesCrossPlatformCheck/**"
+
+jobs:
+  build-and-inspect:
+    name: Aspose.Slides ${{ matrix.slides-version }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slides-version: "24.7.0"
+            native-library-required: false
+          - slides-version: "26.6.0"
+            native-library-required: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Show environment
+        run: |
+          sw_vers
+          xcodebuild -version
+          dotnet --info
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui --source https://api.nuget.org/v3/index.json
+
+      - name: Restore
+        run: >
+          dotnet restore
+          MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj
+          -p:SlidesPackageVersion=${{ matrix.slides-version }}
+          -p:RuntimeIdentifier=maccatalyst-x64
+
+      - name: Build Mac Catalyst app
+        run: >
+          dotnet publish
+          MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj
+          -f net10.0-maccatalyst
+          -c Release
+          -p:SlidesPackageVersion=${{ matrix.slides-version }}
+          -p:RuntimeIdentifier=maccatalyst-x64
+          -p:CreatePackage=false
+          -p:EnableCodeSigning=false
+          --no-restore
+
+      - name: Inspect app bundle native libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path="$(find MauiSlidesCrossPlatformCheck/bin/Release/net10.0-maccatalyst -name '*.app' -type d | head -n 1)"
+          if [[ -z "${app_path}" ]]; then
+            echo "No .app bundle was produced."
+            find MauiSlidesCrossPlatformCheck/bin -maxdepth 6 -type d -print
+            exit 1
+          fi
+
+          echo "App bundle: ${app_path}"
+          echo "Aspose native libraries found in bundle:"
+          find "${app_path}" -name '*aspose.slides.drawing.capi*' -print | sort | tee native-libs-${{ matrix.slides-version }}.txt
+
+          if grep -q 'libaspose.slides.drawing.capi_appleclang' native-libs-${{ matrix.slides-version }}.txt; then
+            echo "Aspose.Slides macOS native drawing library is present."
+          elif [[ "${{ matrix.native-library-required }}" == "true" ]]; then
+            echo "::error::Aspose.Slides macOS native drawing library is missing from the Mac Catalyst bundle."
+            exit 1
+          else
+            echo "::warning::Aspose.Slides macOS native drawing library is missing from the Mac Catalyst bundle."
+          fi
+
+      - name: Upload bundle inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slidesnet-44710-${{ matrix.slides-version }}
+          path: |
+            native-libs-${{ matrix.slides-version }}.txt
+            MauiSlidesCrossPlatformCheck/bin/Release/net10.0-maccatalyst/**/*.app
