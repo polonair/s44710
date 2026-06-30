@@ -12,7 +12,7 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
     <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
-    <MauiVersion Condition="'$(MauiVersion)' == ''">10.0.20</MauiVersion>
+    <MauiVersion Condition="'$(MauiVersion)' == ''">10.0.80</MauiVersion>
     <SlidesPackageVersion Condition="'$(SlidesPackageVersion)' == ''">24.7.0</SlidesPackageVersion>
   </PropertyGroup>
 

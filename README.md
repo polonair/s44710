@@ -2,6 +2,8 @@
 
 This folder contains a minimal MAUI Mac Catalyst repro for investigating whether `Aspose.Slides.NET6.CrossPlatform` is packaged correctly for MAUI.
 
+The repro targets .NET 10 MAUI because current GitHub-hosted macOS runners reject older Mac Catalyst TFMs under the current workload policy.
+
 The GitHub Actions workflow `.github/workflows/slidesnet-44710-maui-maccatalyst.yml` builds the same MAUI app twice:
 
 - `Aspose.Slides.NET6.CrossPlatform` `24.7.0`
