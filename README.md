@@ -11,7 +11,7 @@ After publishing, the workflow inspects the produced `.app` bundle and checks wh
 
 Expected investigation result:
 
-- `24.7.0` may report a warning because its `buildTransitive` targets only include native libraries for exact `net6.0`, `net7.0`, and `net8.0` TFMs. `net10.0-maccatalyst` does not match that condition.
+- `24.7.0` may report a warning because its `buildTransitive` targets only include native libraries for exact `net6.0`, `net7.0`, and `net8.0` TFMs. `net8.0-maccatalyst` does not match that condition.
 - `26.6.0` should include the native libraries because the exact-TFM condition has been removed from the package targets. The workflow fails if the native library is still missing for this version.
 
 For the final runtime check on a rented Mac, open this project and run:
@@ -19,7 +19,7 @@ For the final runtime check on a rented Mac, open this project and run:
 ```bash
 dotnet workload install maui
 dotnet publish MauiSlidesCrossPlatformCheck/MauiSlidesCrossPlatformCheck.csproj \
-  -f net10.0-maccatalyst \
+  -f net8.0-maccatalyst \
   -c Release \
   -p:SlidesPackageVersion=26.6.0 \
   -p:RuntimeIdentifier=maccatalyst-x64 \
